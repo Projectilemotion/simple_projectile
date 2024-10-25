@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projectile Motion Simulation</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+        #slider-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-top: 5px;
+        }
+        input[type="range"] {
+            width: 150px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+</head>
+<body>
+    <div id="slider-container">
+        <label for="angleSlider">Angle:</label>
+        <input type="range" id="angleSlider" min="0" max="90" value="45">
+        <label for="velocitySlider">Velocity:</label>
+        <input type="range" id="velocitySlider" min="0" max="100" value="50">
+    </div>
+    <script>
+        let ball;
+        let g = 9.8;
+        let startX, startY;
+        let previousAngle, previousVelocity;
+        let timeOfFlight, maxHeight, range;
+        let trajectoryPoints = [];
+        let isMoving = false;
+        let stars = [];
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            startX = 50;
+            startY = height - 50;
+
+            for (let i = 0; i < 100; i++) {
+                stars.push({ x: random(width), y: random(height / 2) });
+            }
+
+            const angleSlider = select('#angleSlider');
+            const velocitySlider = select('#velocitySlider');
+
+            angleSlider.input(updateValues);
+            velocitySlider.input(updateValues);
+
+            initializeBall();
+
+            previousAngle = angleSlider.value();
+            previousVelocity = velocitySlider.value();
+
+            calculateTrajectory();
+        }
+
+        function initializeBall() {
+            ball = {
+                x: startX,
+                y: startY,
+                vx: 0,
+                vy: 0,
+                ax: 0,
+                ay: g
+            };
+            trajectoryPoints = [];
+            isMoving = false;
+        }
+
+        function calculateTrajectory() {
+            let angle = radians(select('#angleSlider').value());
+            let velocity = select('#velocitySlider').value();
+
+            timeOfFlight = (2 * velocity * sin(angle)) / g;
+            maxHeight = (pow(velocity * sin(angle), 2)) / (2 * g);
+            range = (pow(velocity, 2) * sin(2 * angle)) / g;
+        }
+
+        function updateValues() {
+            let angleSlider = select('#angleSlider').value();
+            let velocitySlider = select('#velocitySlider').value();
+
+            if (angleSlider !== previousAngle || velocitySlider !== previousVelocity) {
+                initializeBall();
+                previousAngle = angleSlider;
+                previousVelocity = velocitySlider;
+                calculateTrajectory();
+            }
+        }
+
+        function draw() {
+            background(0);
+            drawStars();
+            drawAxes();
+
+            let angle = radians(select('#angleSlider').value());
+            let velocity = select('#velocitySlider').value();
+
+            if (!isMoving && ball.x === startX && ball.y === startY) {
+                ball.vx = velocity * cos(angle);
+                ball.vy = -velocity * sin(angle);
+                isMoving = true;
+            }
+
+            if (isMoving) {
+                trajectoryPoints.push({ x: ball.x, y: ball.y });
+
+                ball.x += ball.vx * 0.1;
+                ball.vy += ball.ay * 0.1;
+                ball.y += ball.vy * 0.1;
+
+                let colorValue = map(ball.y, startY, startY - maxHeight, 0, 255);
+                fill(colorValue, 100, 255 - colorValue);
+                stroke(0);
+                ellipse(ball.x, ball.y, 20, 20);
+
+                if (ball.y > startY) {
+                    ball.y = startY;
+                    ball.vx = 0;
+                    ball.vy = 0;
+                    isMoving = false;
+                }
+            }
+
+            noFill();
+            stroke(150);
+            beginShape();
+            for (let point of trajectoryPoints) {
+                vertex(point.x, point.y);
+            }
+            endShape();
+
+            displayInfo();
+        }
+
+        function drawAxes() {
+            stroke(255);
+            line(0, startY, width, startY);
+            line(startX, 0, startX, height);
+
+            fill(255);
+            text('X', width - 20, startY - 10);
+            text('Y', startX - 20, 20);
+        }
+
+        function drawStars() {
+            fill(255);
+            noStroke();
+            for (let star of stars) {
+                ellipse(star.x, star.y, 2, 2);
+            }
+        }
+
+        function displayInfo() {
+            fill(255);
+            noStroke();
+            text("Angle: " + select('#angleSlider').value() + "°", width - 160, 35);
+            text("Velocity: " + select('#velocitySlider').value(), width - 160, 85);
+
+            let gap = 30;
+            text("Time of Flight: " + timeOfFlight.toFixed(2) + " s", width - 160, 135 + gap);
+            text("Max Height: " + maxHeight.toFixed(2) + " m", width - 160, 155 + gap);
+            text("Range: " + range.toFixed(2) + " m", width - 160, 175 + gap);
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+            startY = height - 50;
+        }
+    </script>
+</body>
+</html>
